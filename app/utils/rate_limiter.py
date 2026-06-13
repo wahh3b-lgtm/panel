@@ -1,6 +1,10 @@
 import time
 from collections import defaultdict
+from logging import getLogger
+
 from fastapi import HTTPException, Request, status
+
+logger = getLogger(__name__)
 
 
 class InMemoryRateLimiter:
@@ -25,7 +29,11 @@ class InMemoryRateLimiter:
         now = time.monotonic()
         timestamps = self._requests[key]
         timestamps = self._cleanup(timestamps, now)
-        self._requests[key] = timestamps
+        if timestamps:
+            self._requests[key] = timestamps
+        else:
+            self._requests.pop(key, None)
+            return
         if len(timestamps) >= self.max_requests:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -39,5 +47,10 @@ _rate_limiter = InMemoryRateLimiter(max_requests=30, window_seconds=60)
 
 def rate_limit_dependency(request: Request) -> None:
     """FastAPI dependency that rate-limits by client IP."""
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = request.client.host if request.client else None
+    if client_ip is None:
+        forwarded = request.headers.get("x-forwarded-for")
+        client_ip = forwarded.split(",")[0].strip() if forwarded else "unknown_shared"
+        if client_ip == "unknown_shared":
+            logger.warning("Rate limiting request with unknown client IP; check proxy header configuration")
     _rate_limiter.check(client_ip)

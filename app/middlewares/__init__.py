@@ -11,11 +11,11 @@ from .request_logging import RequestProcessTimeLoggingMiddleware
 def setup_middleware(app: FastAPI):
     # Security: reject wildcard origin with credentials enabled
     allowed_origins = cors_settings.allowed_origins
-    if allowed_origins == ["*"]:
+    if "*" in allowed_origins:
         import warnings
 
         warnings.warn(
-            "CORS allow_origins='*' with allow_credentials=True is insecure. "
+            "CORS allow_origins contains '*' with allow_credentials=True is insecure. "
             "Set ALLOWED_ORIGINS to explicit origins in production.",
             stacklevel=2,
         )

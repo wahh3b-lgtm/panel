@@ -1,5 +1,6 @@
 import json
 from asyncio import Lock
+from copy import deepcopy
 
 import nats
 from aiocache import cached
@@ -292,8 +293,8 @@ class CoreManager:
     async def get_cores(self, core_ids: list[int] | set[int] | None = None) -> dict[int, AbstractCore]:
         async with self._lock:
             if core_ids is None:
-                return dict(self._cores)
-            return {core_id: core for core_id, core in self._cores.items() if core_id in core_ids}
+                return {core_id: deepcopy(core) for core_id, core in self._cores.items()}
+            return {core_id: deepcopy(core) for core_id, core in self._cores.items() if core_id in core_ids}
 
     @cached()
     async def get_inbounds(self) -> list[str]:
@@ -303,14 +304,14 @@ class CoreManager:
     @cached()
     async def get_inbounds_by_tag(self) -> dict:
         async with self._lock:
-            return dict(self._inbounds_by_tag)
+            return deepcopy(self._inbounds_by_tag)
 
     async def get_inbound_by_tag(self, tag) -> dict:
         async with self._lock:
             inbound = self._inbounds_by_tag.get(tag, None)
             if not inbound:
                 return None
-            return dict(inbound)
+            return deepcopy(inbound)
 
 
 core_manager = CoreManager()

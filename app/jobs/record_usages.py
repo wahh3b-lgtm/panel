@@ -482,7 +482,11 @@ async def record_node_stats_batched(all_node_params: dict):
                     for stmt, stmt_params in queries:
                         await conn.execute(stmt, stmt_params)
         except (OperationalError, DatabaseError) as err:
-            logger.warning("Failed to record node stats batch: %s", err)
+            logger.warning("Batch failed, falling back to per-row safe_execute: %s", err)
+            for upsert_param in upsert_params:
+                queries = build_node_usage_upsert(dialect, upsert_param)
+                for stmt, stmt_params in queries:
+                    await safe_execute(stmt, stmt_params)
 
 
 def _process_users_stats_response(stats_response):

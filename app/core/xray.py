@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import base64
 import json
 from copy import deepcopy
@@ -188,36 +187,13 @@ class XRayConfig(dict):
                 del certificate["serveOnNode"]
                 continue
             if certificate.get("certificateFile", None):
-
-                def _read_file_sync(path: str) -> bytes:
-                    with open(path, "rb") as f:
-                        return f.read()
-
-                try:
-                    loop = asyncio.get_running_loop()
-                    # We're inside an already-running event loop; use executor to avoid blocking
-                    import concurrent.futures
-
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                        cert = loop.run_until_complete(
-                            loop.run_in_executor(pool, _read_file_sync, certificate["certificateFile"])
-                        )
-                except RuntimeError:
-                    # No running loop (e.g. CLI/thread context); safe to block
-                    cert = _read_file_sync(certificate["certificateFile"])
-                settings["sni"].extend(get_cert_SANs(cert))
+                with open(certificate["certificateFile"], "rb") as file:
+                    cert = file.read()
+                    settings["sni"].extend(get_cert_SANs(cert))
 
                 if certificate.get("keyFile", None):
-                    try:
-                        loop = asyncio.get_running_loop()
-                        import concurrent.futures
-
-                        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                            key = loop.run_until_complete(
-                                loop.run_in_executor(pool, _read_file_sync, certificate["keyFile"])
-                            )
-                    except RuntimeError:
-                        key = _read_file_sync(certificate["keyFile"])
+                    with open(certificate["keyFile"], "rb") as file:
+                        key = file.read()
                 else:
                     raise ValueError(f"{inbound_tag} inbound doesn't keyFile in tlsSettings")
 

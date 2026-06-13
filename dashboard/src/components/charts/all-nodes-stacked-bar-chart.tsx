@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { type ChartConfig, ChartContainer, ChartTooltip } from '@/components/ui/chart'
 import { useTranslation } from 'react-i18next'
 import useDirDetection from '@/hooks/use-dir-detection'
+import { useDocumentVisibility } from '@/hooks/use-document-visibility'
 import { useChartViewType } from '@/hooks/use-chart-view-type'
 import { Period, type NodeUsageStat, type UserUsageStat, useGetAdminUsageById, useGetAdminUsageByUsername, useGetNodesSimple, type NodeSimple, useGetUsage } from '@/service/api'
 import { formatBytes, formatGigabytes } from '@/utils/formatByte'
@@ -224,9 +225,11 @@ export function AllNodesStackedBarChart() {
   const { t, i18n } = useTranslation()
   const dir = useDirDetection()
   const chartViewType = useChartViewType()
+  const isTabVisible = useDocumentVisibility()
   const { data: nodesResponse } = useGetNodesSimple({ all: true }, { query: { enabled: true } })
   const { resolvedTheme } = useTheme()
   const shouldUseNodeUsage = selectedAdmin === 'all'
+  const pollingInterval = isTabVisible ? 1000 * 60 * 15 : 1000 * 60 * 60
 
   const handleModalNavigate = (index: number) => {
     if (!chartData[index]) return
@@ -292,7 +295,7 @@ export function AllNodesStackedBarChart() {
   } = useGetUsage(usageParams, {
     query: {
       enabled: shouldUseNodeUsage,
-      refetchInterval: 1000 * 60 * 15,
+      refetchInterval: pollingInterval,
     },
   })
 
@@ -303,7 +306,7 @@ export function AllNodesStackedBarChart() {
   } = useGetAdminUsageById(selectedAdminId ?? 0, usageParams, {
     query: {
       enabled: !shouldUseNodeUsage && selectedAdmin !== 'all' && selectedAdminId != null,
-      refetchInterval: 1000 * 60 * 15,
+      refetchInterval: pollingInterval,
     },
   })
 
@@ -314,7 +317,7 @@ export function AllNodesStackedBarChart() {
   } = useGetAdminUsageByUsername(selectedAdmin, usageParams, {
     query: {
       enabled: !shouldUseNodeUsage && selectedAdmin !== 'all' && selectedAdminId == null,
-      refetchInterval: 1000 * 60 * 15,
+      refetchInterval: pollingInterval,
     },
   })
 
